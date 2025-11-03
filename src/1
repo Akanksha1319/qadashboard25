@@ -1,0 +1,307 @@
+import React, { useState } from 'react';
+import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { CheckCircle, XCircle, Clock, PlayCircle, Upload, TrendingUp, Activity } from 'lucide-react';
+import Papa from 'papaparse';
+
+const Dashboard = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+    setError(null);
+
+    Papa.parse(file, {
+      header: true,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.data && results.data.length > 0) {
+          const row = results.data[0];
+          setData({
+            totalCases: row['Total Test Cases'] || 0,
+            totalExecuted: row['Total Executed'] || 0,
+            totalPassed: row['Total Passed'] || 0,
+            totalFailed: row['Total Failed'] || 0,
+            inProgress: row['Total In Progress'] || 0,
+            executionRate: parseFloat(row['% Execution']) || 0,
+            passRate: parseFloat(row['% Passed']) || 0
+          });
+        }
+        setLoading(false);
+      },
+      error: (err) => {
+        setError('Failed to parse CSV file. Please check the file format.');
+        setLoading(false);
+      }
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-purple-500"></div>
+          <p className="mt-6 text-white text-xl font-medium">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-8">
+        <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-16 max-w-xl w-full text-center border border-white/20">
+          <div className="mb-8">
+            <div className="inline-block p-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mb-6">
+              <Upload className="w-16 h-16 text-white" />
+            </div>
+            <h2 className="text-4xl font-bold text-white mb-4">Upload Dashboard CSV</h2>
+            <p className="text-gray-300 text-lg">Select your dashboard.csv file to visualize test execution metrics</p>
+          </div>
+          
+          <label className="block">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="csv-upload"
+            />
+            <div className="cursor-pointer bg-gradient-to-r from-purple-600 to-pink-600 text-white py-5 px-10 rounded-xl font-bold text-xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 shadow-2xl hover:shadow-purple-500/50">
+              Choose CSV File
+            </div>
+          </label>
+
+          {error && (
+            <div className="mt-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl backdrop-blur">
+              <p className="text-red-200 text-sm">{error}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const pieData = [
+    { name: 'Passed', value: data.totalPassed, color: '#10b981' },
+    { name: 'Failed', value: data.totalFailed, color: '#ef4444' },
+    { name: 'In Progress', value: data.inProgress, color: '#f59e0b' },
+    { name: 'Not Executed', value: data.totalCases - data.totalExecuted, color: '#6b7280' }
+  ];
+
+  const barData = [
+    { name: 'Total', value: data.totalCases, color: '#8b5cf6' },
+    { name: 'Executed', value: data.totalExecuted, color: '#6366f1' },
+    { name: 'Passed', value: data.totalPassed, color: '#10b981' },
+    { name: 'Failed', value: data.totalFailed, color: '#ef4444' }
+  ];
+
+  const StatCard = ({ icon: Icon, title, value, subtitle, gradient, iconBg }) => (
+    <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/20 transform transition-all hover:scale-105 hover:shadow-2xl hover:border-white/40">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1">
+          <p className="text-gray-300 text-sm font-semibold mb-2 uppercase tracking-wider">{title}</p>
+          <p className={`text-5xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent mb-2`}>
+            {value}
+          </p>
+          {subtitle && <p className="text-gray-400 text-sm font-medium">{subtitle}</p>}
+        </div>
+        <div className={`p-4 rounded-xl bg-gradient-to-br ${iconBg}`}>
+          <Icon className="w-8 h-8 text-white" />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-12 text-center">
+          <div className="inline-block mb-4">
+            <Activity className="w-16 h-16 text-purple-400 animate-pulse" />
+          </div>
+          <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-4">
+            Test Execution Dashboard
+          </h1>
+          <p className="text-gray-300 text-xl">Real-time Testing Metrics & Analytics</p>
+          <button
+            onClick={() => setData(null)}
+            className="mt-6 px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium backdrop-blur border border-white/20 transition-all"
+          >
+            Upload Different File
+          </button>
+        </div>
+
+        {/* Stats Cards - Row 1 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <StatCard
+            icon={PlayCircle}
+            title="Total Test Cases"
+            value={data.totalCases}
+            gradient="from-purple-400 to-pink-400"
+            iconBg="from-purple-500 to-pink-500"
+          />
+          <StatCard
+            icon={TrendingUp}
+            title="Total Executed"
+            value={data.totalExecuted}
+            subtitle={`${data.executionRate.toFixed(2)}% Execution Rate`}
+            gradient="from-blue-400 to-purple-400"
+            iconBg="from-blue-500 to-purple-500"
+          />
+        </div>
+
+        {/* Stats Cards - Row 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <StatCard
+            icon={CheckCircle}
+            title="Total Passed"
+            value={data.totalPassed}
+            subtitle={`${data.passRate.toFixed(2)}% Pass Rate`}
+            gradient="from-green-400 to-emerald-400"
+            iconBg="from-green-500 to-emerald-500"
+          />
+          <StatCard
+            icon={XCircle}
+            title="Total Failed"
+            value={data.totalFailed}
+            subtitle={`${((data.totalFailed / data.totalExecuted) * 100).toFixed(2)}% Failure Rate`}
+            gradient="from-red-400 to-pink-400"
+            iconBg="from-red-500 to-pink-500"
+          />
+        </div>
+
+        {/* Stats Cards - Row 3 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <StatCard
+            icon={Clock}
+            title="Total In Progress"
+            value={data.inProgress}
+            gradient="from-amber-400 to-orange-400"
+            iconBg="from-amber-500 to-orange-500"
+          />
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/20">
+            <p className="text-gray-300 text-sm font-semibold mb-6 uppercase tracking-wider text-center">
+              Execution Summary
+            </p>
+            <div className="flex justify-around">
+              <div className="text-center">
+                <p className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                  {data.executionRate.toFixed(2)}%
+                </p>
+                <p className="text-gray-400 text-sm font-medium">Execution Rate</p>
+              </div>
+              <div className="w-px bg-white/20"></div>
+              <div className="text-center">
+                <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">
+                  {data.passRate.toFixed(2)}%
+                </p>
+                <p className="text-gray-400 text-sm font-medium">Pass Rate</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Pie Chart */}
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/20">
+            <h2 className="text-3xl font-bold text-white mb-6 text-center">Test Distribution</h2>
+            <ResponsiveContainer width="100%" height={320}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value, percent }) => `${name}: ${value}`}
+                  outerRadius={110}
+                  fill="#8884d8"
+                  dataKey="value"
+                  stroke="rgba(255,255,255,0.2)"
+                  strokeWidth={2}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(0,0,0,0.8)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    color: 'white'
+                  }} 
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Bar Chart */}
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/20">
+            <h2 className="text-3xl font-bold text-white mb-6 text-center">Test Metrics Overview</h2>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={barData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="name" stroke="#fff" />
+                <YAxis stroke="#fff" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(0,0,0,0.8)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    color: 'white'
+                  }} 
+                />
+                <Bar dataKey="value" radius={[10, 10, 0, 0]}>
+                  {barData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Progress Bars */}
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl p-10 border border-white/20">
+          <h2 className="text-3xl font-bold text-white mb-8">Execution Progress</h2>
+          
+          <div className="mb-8">
+            <div className="flex justify-between mb-3">
+              <span className="text-gray-200 font-semibold text-lg">Overall Execution</span>
+              <span className="text-purple-400 font-bold text-xl">{data.executionRate.toFixed(2)}%</span>
+            </div>
+            <div className="w-full bg-white/10 rounded-full h-6 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-purple-500 to-pink-500 h-6 rounded-full transition-all duration-1000 shadow-lg shadow-purple-500/50"
+                style={{ width: `${data.executionRate}%` }}
+              ></div>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between mb-3">
+              <span className="text-gray-200 font-semibold text-lg">Pass Rate</span>
+              <span className="text-green-400 font-bold text-xl">{data.passRate.toFixed(2)}%</span>
+            </div>
+            <div className="w-full bg-white/10 rounded-full h-6 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-green-500 to-emerald-500 h-6 rounded-full transition-all duration-1000 shadow-lg shadow-green-500/50"
+                style={{ width: `${data.passRate}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
